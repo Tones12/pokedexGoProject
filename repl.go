@@ -5,16 +5,18 @@ import (
 	"fmt"
 	"os"
 	"bufio"
-	"net/http"
-	"encoding/json"
-	"io"
 	"github.com/tones12/pokedexgoproject/internal/pokeapi"
 )
 
 type cliCommand struct {
 	name		string
 	description	string
-	callback	func() error
+	callback	func(*config) error
+}
+
+type config struct {
+	nextLocationsURL *string
+	prevLocationsURL *string
 }
 
 func getCommands() map[string]cliCommand {
@@ -31,19 +33,23 @@ func getCommands() map[string]cliCommand {
 	},
 	"map": {
 		name:		 "map",
-		description: "Displays Pokemon locations, 20 at a time",
+		description: "Displays Pokemon locations, 20 at a time, and the next 20 locations",
 		callback:	 commandMap,
+	},
+	"mapb": {
+		name:		 "mapb",
+		description: "Displays the previous 20 locations",
+		callback:	 commandMapb,
 	},
 	}
 }
 
-func commandExit(*config) error {
+func commandExit(cfg *config) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
-
-func commandHelp(*config) error {
+func commandHelp(cfg *config) error {
 	commands := getCommands()
 	fmt.Printf("Welcome to the Pokedex!\nUsage:\n\n")
 	for _, command := range commands {
@@ -51,21 +57,43 @@ func commandHelp(*config) error {
 	}
 	return nil
 }
-
-func commandMap(*config) error {
-	
-	pokeapi.FetchLocationAreas()
+func commandMap(cfg *config) error {
+	locations, err := pokeapi.FetchLocationAreas(cfg.nextLocationsURL)
+	if err != nil {
+		return err
+	}
+	cfg.nextLocationsURL = locations.Next
+	cfg.prevLocationsURL = locations.Previous
+	for _, location := range locations.Results {
+		fmt.Println(location.Name)
+	}
 	return nil
 }
+func commandMapb(cfg *config) error {
+	if cfg.prevLocationsURL == nil {
+		fmt.Println("you're on the first page")
+		return nil
+	}
+	locations, err := pokeapi.FetchLocationAreas(cfg.prevLocationsURL)
+	if err != nil {
+		return err
+	}
 
+	cfg.nextLocationsURL = locations.Next
+	cfg.prevLocationsURL = locations.Previous
+	
+	for _, location := range locations.Results {
+		fmt.Println(location.Name)
+	}
+	return nil
+}
 func cleanInput(text string) []string {
 	var words []string
 	lowerText := strings.ToLower(text)
 	words = strings.Fields(lowerText)
 	return words
 }
-
-func startRepl() {
+func startRepl(cfg *config) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("Pokedex > ")
@@ -77,7 +105,7 @@ func startRepl() {
 		commandName := userInput[0]
 		commands := getCommands()
 		if command, ok := commands[commandName]; ok {
-			err := command.callback()
+			err := command.callback(cfg)
 			if err != nil {
 				fmt.Println("Error executing command: ", err)
 			}
