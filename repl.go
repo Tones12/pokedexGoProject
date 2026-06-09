@@ -17,6 +17,7 @@ type cliCommand struct {
 type config struct {
 	nextLocationsURL *string
 	prevLocationsURL *string
+	pokeapiClient    *pokeapi.Client
 }
 
 func getCommands() map[string]cliCommand {
@@ -44,12 +45,12 @@ func getCommands() map[string]cliCommand {
 	}
 }
 
-func commandExit(cfg *config) error {
+func commandExit(cfg *config, name string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
-func commandHelp(cfg *config) error {
+func commandHelp(cfg *config, name string) error {
 	commands := getCommands()
 	fmt.Printf("Welcome to the Pokedex!\nUsage:\n\n")
 	for _, command := range commands {
@@ -57,8 +58,8 @@ func commandHelp(cfg *config) error {
 	}
 	return nil
 }
-func commandMap(cfg *config) error {
-	locations, err := pokeapi.FetchLocationAreas(cfg.nextLocationsURL)
+func commandMap(cfg *config, name string) error {
+	locations, err := cfg.pokeapiClient.FetchLocationAreas(cfg.nextLocationsURL)
 	if err != nil {
 		return err
 	}
@@ -69,12 +70,30 @@ func commandMap(cfg *config) error {
 	}
 	return nil
 }
-func commandMapb(cfg *config) error {
+func commandMapb(cfg *config, name string) error {
 	if cfg.prevLocationsURL == nil {
 		fmt.Println("you're on the first page")
 		return nil
 	}
-	locations, err := pokeapi.FetchLocationAreas(cfg.prevLocationsURL)
+	locations, err := cfg.pokeapiClient.FetchLocationAreas(cfg.prevLocationsURL)
+	if err != nil {
+		return err
+	}
+
+	cfg.nextLocationsURL = locations.Next
+	cfg.prevLocationsURL = locations.Previous
+	
+	for _, location := range locations.Results {
+		fmt.Println(location.Name)
+	}
+	return nil
+}
+func commandExplore(cfg *config, name string) error {
+	if cfg.prevLocationsURL == nil {
+		fmt.Println("you're on the first page")
+		return nil
+	}
+	locations, err := cfg.pokeapiClient.FetchLocationAreas(cfg.prevLocationsURL)
 	if err != nil {
 		return err
 	}
@@ -102,15 +121,29 @@ func startRepl(cfg *config) {
 		if len(userInput) == 0 {
 			continue
 		}
-		commandName := userInput[0]
-		commands := getCommands()
-		if command, ok := commands[commandName]; ok {
-			err := command.callback(cfg)
+		if len(userInput) == 1 {
+			commandName := userInput[0]
+			commands := getCommands()
+			if command, ok := commands[commandName]; ok {
+				err := command.callback(cfg)
 			if err != nil {
 				fmt.Println("Error executing command: ", err)
 			}
-		} else {
+			} else {
 			fmt.Println("Unknown command")
+			}
+		} else if len(userInput) == 2 {
+			commandName := userInput[0]
+			locName := userInput[1]
+			commands := getCommands()
+			if command, ok := commands[commandName]; ok {
+				err := command.callback(cfg, locName)
+				if err != nil {
+					fmt.Println("Error executing command: ", err)
+				}
+			} else {
+				fmt.Println("Unknown command")
+			}
 		}
 	}
 }
