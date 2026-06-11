@@ -19,7 +19,7 @@ type pokedexLocArea struct {
 	} `json:"results"`
 }
 
-type pkedexLocAreaName struct {
+type pokedexLocAreaName struct {
 	EncounterMethodRates []struct {
 		EncounterMethod struct {
 			Name string `json:"name"`
@@ -121,22 +121,20 @@ func (c *Client) FetchLocationAreas(url *string) (pokedexLocArea, error) {
 	return locationArea, nil
 }
 
-func (c *Client) FetchLocationAreasName(url *string, name *string) (pokedexLocArea, error) {
-	var locationArea pokedexLocArea
+func (c *Client) FetchLocationAreasName(name string) (pokedexLocAreaName, error) {
+	var locationAreaName pokedexLocAreaName
 	defaultURL := "https://pokeapi.co/api/v2/location-area/"
-	if url == nil {
-		url = &defaultURL
-	}
+	url := defaultURL + name + "/"
 
-	cacheData, ok := c.cache.Get(*url)
+	cacheData, ok := c.cache.Get(url)
 	if ok {
-		if err := json.Unmarshal(cacheData, &locationArea); err != nil {
-			return locationArea, fmt.Errorf("error unmarshalling data: %w", err)
+		if err := json.Unmarshal(cacheData, &locationAreaName); err != nil {
+			return locationAreaName, fmt.Errorf("error unmarshalling data: %w", err)
 		}
-		return locationArea, nil
+		return locationAreaName, nil
 	}
 
-	fmt.Println("Making a request to the PokeAPI")
+	fmt.Println("Exploring ")
 	res, err := http.Get(*url)
 	if err != nil {
 		return locationArea, fmt.Errorf("error creating request: %w", err)
