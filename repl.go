@@ -84,30 +84,20 @@ func commandMapb(cfg *config, name string) error {
 	if err != nil {
 		return err
 	}
-
 	cfg.nextLocationsURL = locations.Next
 	cfg.prevLocationsURL = locations.Previous
-	
 	for _, location := range locations.Results {
 		fmt.Println(location.Name)
 	}
 	return nil
 }
 func commandExplore(cfg *config, name string) error {
-	if cfg.prevLocationsURL == nil {
-		fmt.Println("you're on the first page")
-		return nil
-	}
-	locations, err := cfg.pokeapiClient.FetchLocationAreas(cfg.prevLocationsURL)
+	locationData, err := cfg.pokeapiClient.FetchLocationAreasName(name)
 	if err != nil {
 		return err
 	}
-
-	cfg.nextLocationsURL = locations.Next
-	cfg.prevLocationsURL = locations.Previous
-	
-	for _, location := range locations.Results {
-		fmt.Println(location.Name)
+	for _, pokemonEncounters := range locationData.PokemonEncounters {
+		fmt.Printf(" - %s\n", pokemonEncounters.Pokemon.Name)
 	}
 	return nil
 }
@@ -130,7 +120,7 @@ func startRepl(cfg *config) {
 			commandName := userInput[0]
 			commands := getCommands()
 			if command, ok := commands[commandName]; ok {
-				err := command.callback(cfg)
+				err := command.callback(cfg, "")
 			if err != nil {
 				fmt.Println("Error executing command: ", err)
 			}

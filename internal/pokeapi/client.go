@@ -134,23 +134,23 @@ func (c *Client) FetchLocationAreasName(name string) (pokedexLocAreaName, error)
 		return locationAreaName, nil
 	}
 
-	fmt.Println("Exploring ")
-	res, err := http.Get(*url)
+	fmt.Printf("Exploring %s\n Found Pokemon:\n", name)
+	res, err := http.Get(url)
 	if err != nil {
-		return locationArea, fmt.Errorf("error creating request: %w", err)
+		return locationAreaName, fmt.Errorf("error creating request: %w", err)
 	}
 	defer res.Body.Close()
 
 	data, err := io.ReadAll(res.Body)
 	if err != nil {
-		return locationArea, fmt.Errorf("error reading response: %w", err)
+		return locationAreaName, fmt.Errorf("error reading response: %w", err)
 	}
 	
-	c.cache.Add(*url, data)
+	c.cache.Add(url, data)
 
-	if err := json.Unmarshal(data, &locationArea); err != nil {
-		return locationArea, fmt.Errorf("error unmarshalling data: %w", err)
+	if err := json.Unmarshal(data, &locationAreaName); err != nil {
+		return locationAreaName, fmt.Errorf("error unmarshalling data: %w", err)
 	}
 
-	return locationArea, nil
+	return locationAreaName, nil
 }
